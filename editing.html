@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KeyFlow Authenticator - Backup Editor</title>
+    <style>
+        :root {
+            --bg-primary: #0a0b10;
+            --bg-surface: rgba(20, 22, 34, 0.7);
+            --bg-card: rgba(30, 34, 54, 0.6);
+            --accent-glow: #7928ca;
+            --accent-cyan: #00f2fe;
+            --accent-pink: #ff007f;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --border-glow: rgba(121, 40, 202, 0.3);
+            --input-bg: rgba(10, 11, 16, 0.8);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 2rem 1rem;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(121, 40, 202, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(0, 242, 254, 0.1) 0%, transparent 40%);
+            background-attachment: fixed;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            background: var(--bg-surface);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4), 0 0 40px var(--border-glow);
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #00f2fe 0%, #4facfe 30%, #7928ca 70%, #ff007f 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+            text-align: center;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            text-align: center;
+            margin-bottom: 2rem;
+            font-size: 0.95rem;
+        }
+
+        /* File Operations Zone */
+        .file-zone {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (max-width: 600px) {
+            .file-zone { grid-template-columns: 1fr; }
+        }
+
+        .drop-box {
+            border: 2px dashed rgba(121, 40, 202, 0.4);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            background: rgba(10, 11, 16, 0.4);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .drop-box:hover, .drop-box.dragover {
+            border-color: var(--accent-cyan);
+            background: rgba(0, 242, 254, 0.05);
+            box-shadow: 0 0 15px rgba(0, 242, 254, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .hidden-input {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .action-btn {
+            background: linear-gradient(135deg, var(--accent-glow) 0%, #531499 100%);
+            color: white;
+            border: none;
+            padding: 1rem;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            box-shadow: 0 4px 15px rgba(121, 40, 202, 0.3);
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(121, 40, 202, 0.5), 0 0 10px var(--accent-cyan);
+            filter: brightness(1.1);
+        }
+
+        .action-btn.download-btn {
+            background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+            color: #0a0b10;
+            box-shadow: 0 4px 15px rgba(0, 242, 254, 0.3);
+        }
+
+        .action-btn.download-btn:hover {
+            box-shadow: 0 6px 20px rgba(0, 242, 254, 0.5), 0 0 10px var(--accent-pink);
+        }
+
+        /* Editor Section Styling */
+        .editor-layout {
+            display: none;
+            flex-direction: column;
+            gap: 2rem;
+            margin-top: 1rem;
+        }
+
+        .section-panel {
+            background: var(--bg-card);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.2rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 0.6rem;
+        }
+
+        .panel-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .panel-meta {
+            display: flex;
+            gap: 0.8rem;
+            align-items: center;
+        }
+
+        .meta-input {
+            background: var(--input-bg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-main);
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            width: 140px;
+            transition: all 0.3s;
+        }
+
+        .meta-input:focus {
+            border-color: var(--accent-glow);
+            outline: none;
+            box-shadow: 0 0 8px var(--border-glow);
+        }
+
+        .btn-small {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-main);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-small:hover {
+            background: rgba(121, 40, 202, 0.3);
+            border-color: var(--accent-glow);
+            color: white;
+        }
+
+        .btn-danger-small {
+            background: rgba(255, 0, 127, 0.1);
+            color: #ff409f;
+            border: 1px solid rgba(255, 0, 127, 0.2);
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        .btn-danger-small:hover {
+            background: rgba(255, 0, 127, 0.3);
+            border-color: var(--accent-pink);
+            color: white;
+        }
+
+        /* Data Forms & Item Stacking */
+        .item-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .totp-row {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr 1fr auto;
+            gap: 0.8rem;
+            align-items: center;
+            background: rgba(10, 11, 16, 0.3);
+            padding: 0.8rem;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            transition: all 0.2s;
+        }
+
+        .totp-row:hover {
+            border-color: rgba(121, 40, 202, 0.2);
+            background: rgba(10, 11, 16, 0.5);
+        }
+
+        .recovery-block {
+            background: rgba(10, 11, 16, 0.3);
+            padding: 1.2rem;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            margin-bottom: 1rem;
+        }
+
+        .recovery-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.8rem;
+        }
+
+        .code-textarea {
+            width: 100%;
+            height: 80px;
+            background: var(--input-bg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-main);
+            padding: 0.6rem;
+            border-radius: 8px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9rem;
+            resize: vertical;
+            line-height: 1.4;
+        }
+
+        .code-textarea:focus {
+            border-color: var(--accent-cyan);
+            outline: none;
+            box-shadow: 0 0 8px rgba(0, 242, 254, 0.2);
+        }
+
+        .form-control {
+            background: var(--input-bg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-main);
+            padding: 0.6rem 0.8rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            width: 100%;
+            transition: all 0.3s;
+        }
+
+        .form-control:focus {
+            border-color: var(--accent-glow);
+            outline: none;
+        }
+
+        select.form-control {
+            cursor: pointer;
+        }
+
+        /* Toast Component */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: rgba(10, 11, 16, 0.9);
+            border-left: 4px solid var(--accent-cyan);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>⚡ KeyFlow Editor</h1>
+        <div class="subtitle">Securely modify tokens, issuers, and recovery codes offline</div>
+
+        <!-- File Upload Area -->
+        <div class="file-zone">
+            <div class="drop-box" id="dropBox">
+                <span id="dropText">📂 Click or drop raw backup .json here</span>
+                <input type="file" id="fileInput" class="hidden-input" accept=".json">
+            </div>
+            <button class="action-btn download-btn" id="exportBtn" disabled>
+                💾 Save Authenticator Export
+            </button>
+        </div>
+
+        <!-- Main Workspace (Hidden until uploaded) -->
+        <div class="editor-layout" id="editorLayout">
+            
+            <!-- Metadata & Admin Configuration -->
+            <div class="section-panel">
+                <div class="panel-header" style="border: none; margin: 0; padding: 0;">
+                    <div class="panel-title">🛡️ System Configuration</div>
+                    <div class="panel-meta">
+                        <label style="font-size: 0.85rem; color: var(--text-muted);">Admin User:</label>
+                        <input type="text" id="adminInput" class="meta-input" placeholder="Admin Name">
+                        <label style="font-size: 0.85rem; color: var(--text-muted); margin-left: 0.5rem;">UID Pointer:</label>
+                        <input type="text" id="uidInput" class="meta-input" style="width: 220px;" placeholder="Firebase UUID">
+                    </div>
+                </div>
+            </div>
+
+            <!-- TOTP / Mains Section -->
+            <div class="section-panel">
+                <div class="panel-header">
+                    <div class="panel-title">🔑 TOTP Authentication Keys (Mains)</div>
+                    <button class="btn-small" id="addTotpBtn">+ Add Account Token</button>
+                </div>
+                <div class="item-stack" id="totpContainer">
+                    <!-- Dynamic Rows Go Here -->
+                </div>
+            </div>
+
+            <!-- Recovery Codes Section -->
+            <div class="section-panel">
+                <div class="panel-header">
+                    <div class="panel-title">🧱 Emergency Recovery Passcodes</div>
+                    <button class="btn-small" id="addRecoveryBtn">+ Add Platform Block</button>
+                </div>
+                <div id="recoveryContainer">
+                    <!-- Dynamic Blocks Go Here -->
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Toast Notification Engine Component -->
+    <div class="toast" id="toastBox">Config updated successfully</div>
+
+    <script>
+        // Data Structure Memory Space
+        let rawPayload = {
+            admin: "MuntaXir",
+            mains: {},
+            recovery_codes: {}
+        };
+        let defaultUID = "IUzGCL3OoLbu9WKW9aIodALumqE2";
+
+        // DOM Handles
+        const dropBox = document.getElementById('dropBox');
+        const fileInput = document.getElementById('fileInput');
+        const dropText = document.getElementById('dropText');
+        const exportBtn = document.getElementById('exportBtn');
+        const editorLayout = document.getElementById('editorLayout');
+        const adminInput = document.getElementById('adminInput');
+        const uidInput = document.getElementById('uidInput');
+        const totpContainer = document.getElementById('totpContainer');
+        const recoveryContainer = document.getElementById('recoveryContainer');
+        const toastBox = document.getElementById('toastBox');
+
+        // Notification Trigger
+        function showToast(text, color = '#00f2fe') {
+            toastBox.innerText = text;
+            toastBox.style.borderLeftColor = color;
+            toastBox.classList.add('show');
+            setTimeout(() => toastBox.classList.remove('show'), 3500);
+        }
+
+        // Drag and Drop Event Configurations
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropBox.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                dropBox.classList.add('dragover');
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropBox.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                dropBox.classList.remove('dragover');
+            }, false);
+        });
+
+        dropBox.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if(files.length) handleFileRead(files[0]);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if(e.target.files.length) handleFileRead(e.target.files[0]);
+        });
+
+        // Parse Context File Content Safely
+        function handleFileRead(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    
+                    // Enforce underlying structural properties safely
+                    rawPayload.admin = parsed.admin || "MuntaXir";
+                    rawPayload.mains = parsed.mains || {};
+                    rawPayload.recovery_codes = parsed.recovery_codes || {};
+
+                    // Detect fallback execution parameters for core User ID
+                    let detectedUID = Object.keys(rawPayload.mains)[0] || Object.keys(rawPayload.recovery_codes)[0] || defaultUID;
+                    defaultUID = detectedUID;
+
+                    dropText.innerText = `✅ Loaded: ${file.name}`;
+                    dropBox.style.borderColor = 'var(--accent-cyan)';
+                    
+                    initWorkspace();
+                    showToast("Backup dataset mapped to interface successfully!");
+                } catch(err) {
+                    showToast("Invalid JSON file signature", "var(--accent-pink)");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // Display Editor UI Panels and populate data arrays
+        function initWorkspace() {
+            adminInput.value = rawPayload.admin;
+            uidInput.value = defaultUID;
+
+            renderTotpRows();
+            renderRecoveryBlocks();
+
+            editorLayout.style.display = 'flex';
+            exportBtn.removeAttribute('disabled');
+        }
+
+        // Sync local adjustments from master context headers
+        adminInput.addEventListener('input', (e) => rawPayload.admin = e.target.value);
+        uidInput.addEventListener('change', (e) => {
+            const nextUID = e.target.value.trim() || defaultUID;
+            
+            // Re-key mains data node map securely
+            if (rawPayload.mains[defaultUID]) {
+                rawPayload.mains[nextUID] = rawPayload.mains[defaultUID];
+                delete rawPayload.mains[defaultUID];
+            }
+            // Re-key recovery data node map securely
+            if (rawPayload.recovery_codes[defaultUID]) {
+                rawPayload.recovery_codes[nextUID] = rawPayload.recovery_codes[defaultUID];
+                delete rawPayload.recovery_codes[defaultUID];
+            }
+
+            defaultUID = nextUID;
+            showToast("User Context UID re-keyed accurately.");
+        });
+
+        // Render Active TOTP Form Rows Array
+        function renderTotpRows() {
+            totpContainer.innerHTML = '';
+            const userMains = rawPayload.mains[defaultUID] || {};
+            
+            Object.keys(userMains).forEach(tokenKey => {
+                const item = userMains[tokenKey];
+                createTotpRowElement(tokenKey, item.issuer, item.secret);
+            });
+        }
+
+        function createTotpRowElement(tokenKey, issuerVal = '', secretVal = '') {
+            const row = document.createElement('div');
+            row.className = 'totp-row';
+            row.dataset.key = tokenKey;
+
+            row.innerHTML = `
+                <input type="text" placeholder="Issuer (e.g. Github)" class="form-control item-issuer" value="${issuerVal}">
+                <input type="text" placeholder="Secret Key or \"hidden\"" class="form-control item-secret" value="${secretVal}">
+                <div style="font-size:0.75rem; color:var(--text-muted); font-family:monospace; overflow:hidden; text-overflow:ellipsis;">${tokenKey}</div>
+                <button class="btn-danger-small delete-totp-btn">Delete</button>
+            `;
+
+            // Setup Data Modification Sync Links
+            row.querySelector('.item-issuer').addEventListener('input', (e) => {
+                ensureMainsPath();
+                rawPayload.mains[defaultUID][tokenKey].issuer = e.target.value;
+            });
+
+            row.querySelector('.item-secret').addEventListener('input', (e) => {
+                ensureMainsPath();
+                rawPayload.mains[defaultUID][tokenKey].secret = e.target.value;
+            });
+
+            row.querySelector('.delete-totp-btn').addEventListener('click', () => {
+                if(rawPayload.mains[defaultUID]) {
+                    delete rawPayload.mains[defaultUID][tokenKey];
+                }
+                row.remove();
+                showToast("Token deleted from memory buffer.");
+            });
+
+            totpContainer.appendChild(row);
+        }
+
+        // Render Active Recovery Code Blocks Array
+        function renderRecoveryBlocks() {
+            recoveryContainer.innerHTML = '';
+            const userRecovery = rawPayload.recovery_codes[defaultUID] || {};
+
+            Object.keys(userRecovery).forEach(platformName => {
+                const codesArr = userRecovery[platformName];
+                createRecoveryBlockElement(platformName, codesArr);
+            });
+        }
+
+        function createRecoveryBlockElement(platformName = '', codesArr = []) {
+            const block = document.createElement('div');
+            block.className = 'recovery-block';
+            block.dataset.platform = platformName;
+
+            // Flatten items by line breaks for easier user interaction
+            const flattenedText = codesArr.join('\n');
+
+            block.innerHTML = `
+                <div class="recovery-header">
+                    <input type="text" placeholder="Platform Name (e.g. Google)" class="form-control platform-title" style="width: 250px; font-weight:700; color:var(--accent-cyan);" value="${platformName}">
+                    <button class="btn-danger-small delete-recovery-btn">Remove Platform</button>
+                </div>
+                <textarea placeholder="Paste alternative backup codes here (One per line)" class="code-textarea">${flattenedText}</textarea>
+            `;
+
+            const titleInput = block.querySelector('.platform-title');
+            const textArea = block.querySelector('.code-textarea');
+
+            // Handle title shift and re-key target entry maps
+            titleInput.addEventListener('change', (e) => {
+                const nextTitle = e.target.value.trim();
+                if(!nextTitle || nextTitle === platformName) return;
+
+                ensureRecoveryPath();
+                rawPayload.recovery_codes[defaultUID][nextTitle] = rawPayload.recovery_codes[defaultUID][platformName] || [];
+                delete rawPayload.recovery_codes[defaultUID][platformName];
+                
+                platformName = nextTitle;
+                block.dataset.platform = nextTitle;
+                showToast("Platform block title safely updated.");
+            });
+
+            // Parse text space line item shifts into accurate structure arrays
+            textArea.addEventListener('input', (e) => {
+                if(!platformName) return;
+                ensureRecoveryPath();
+                const lines = e.target.value.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+                rawPayload.recovery_codes[defaultUID][platformName] = lines;
+            });
+
+            block.querySelector('.delete-recovery-btn').addEventListener('click', () => {
+                if(rawPayload.recovery_codes[defaultUID]) {
+                    delete rawPayload.recovery_codes[defaultUID][platformName];
+                }
+                block.remove();
+                showToast("Platform block removed from memory buffer.");
+            });
+
+            recoveryContainer.appendChild(block);
+        }
+
+        // Structural Instantiation Guard Helpers
+        function ensureMainsPath() {
+            if(!rawPayload.mains[defaultUID]) rawPayload.mains[defaultUID] = {};
+        }
+
+        function ensureRecoveryPath() {
+            if(!rawPayload.recovery_codes[defaultUID]) rawPayload.recovery_codes[defaultUID] = {};
+        }
+
+        // Generate Random Internal Reference Keys safely mimicking Firebase Push Keys
+        function generatePushID() {
+            const chars = '-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
+            let result = '-O'; // Mimic modern pattern prefix signatures
+            for (let i = 0; i < 18; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
+        }
+
+        // Core Control Triggers to Add New Nodes dynamically
+        document.getElementById('addTotpBtn').addEventListener('click', () => {
+            ensureMainsPath();
+            const newKey = generatePushID();
+            rawPayload.mains[defaultUID][newKey] = { issuer: "", secret: "" };
+            createTotpRowElement(newKey, "", "");
+            showToast("New blank entry created below.");
+        });
+
+        document.getElementById('addRecoveryBtn').addEventListener('click', () => {
+            ensureRecoveryPath();
+            const placeholderPlatform = "New Platform (" + Math.floor(Math.random()*100) + ")";
+            rawPayload.recovery_codes[defaultUID][placeholderPlatform] = [];
+            createRecoveryBlockElement(placeholderPlatform, []);
+            showToast("New recovery layout section initialized.");
+        });
+
+        // Assemble structural export payload file automatically down to client pipeline
+        exportBtn.addEventListener('click', () => {
+            // Enforce clean structured export arrays, eliminating missing entries
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(rawPayload, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", "keyflow_edited_backup.json");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            showToast("Backup exported successfully!", "var(--accent-pink)");
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+{
+  "admin": "MuntaXir",
+  "mains": {
+    "9aIodALumqE2randomrandom": {
+      "-Oarm1ZR6KXed_wv-OD_": {
+        "issuer": "Github",
+        "secret": "Hidden"
+      }
+    }
+  },
+  "recovery_codes": {
+    "9aIodALumqE2randomrandom": {
+      "Facebook": [
+        "11111",
+        "22222",
+        "33333"
+      ]
+    }
+  }
+}
