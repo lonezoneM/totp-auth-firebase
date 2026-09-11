@@ -67,6 +67,34 @@
             font-size: 0.95rem;
         }
 
+        .header-actions {
+            margin-top: 1rem;
+            display: flex;
+            justify-content: center;
+        }
+
+        .editor-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.85rem 1.25rem;
+            border-radius: 999px;
+            text-decoration: none;
+            color: var(--text-main);
+            background: rgba(138, 43, 226, 0.14);
+            border: 1px solid rgba(138, 43, 226, 0.32);
+            box-shadow: 0 0 20px rgba(138, 43, 226, 0.12);
+            transition: all 0.25s ease;
+            font-weight: 600;
+        }
+
+        .editor-link:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent-primary);
+            background: rgba(138, 43, 226, 0.22);
+            box-shadow: 0 0 25px var(--accent-glow);
+        }
+
         .glass-panel {
             background: var(--panel-bg);
             backdrop-filter: blur(16px);
@@ -78,7 +106,6 @@
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
 
-        /* Upload Area Styling */
         .drop-zone {
             border: 2px dashed rgba(138, 43, 226, 0.3);
             border-radius: 16px;
@@ -128,7 +155,6 @@
             display: none;
         }
 
-        /* Layout Grid Sections */
         .section-title {
             font-size: 1.25rem;
             font-weight: 600;
@@ -151,7 +177,6 @@
             display: none !important;
         }
 
-        /* Token and Recovery Cards Styling */
         .auth-card {
             background: var(--card-bg);
             border: 1px solid var(--panel-border);
@@ -209,7 +234,6 @@
             transform: scale(1.02);
         }
 
-        /* Timer Progress Circle/Bar */
         .progress-wrapper {
             position: absolute;
             top: 1.25rem;
@@ -223,13 +247,12 @@
         }
 
         .progress-ring__circle {
-            stroke-dasharray: 75.4; /* 2 * pi * 12 */
+            stroke-dasharray: 75.4;
             stroke-dashoffset: 0;
             transition: stroke-dashoffset 0.1s linear;
             stroke: var(--accent-primary);
         }
 
-        /* Recovery Codes Layout */
         .recovery-grid {
             display: flex;
             flex-direction: column;
@@ -267,7 +290,6 @@
             opacity: 1;
         }
 
-        /* Interactive Notification Toast */
         .toast {
             position: fixed;
             bottom: 2rem;
@@ -294,7 +316,6 @@
             opacity: 1;
         }
 
-        /* Custom Scrollbar */
         ::-webkit-scrollbar {
             width: 8px;
         }
@@ -316,9 +337,11 @@
         <header>
             <h1>KeyFlow Authenticator</h1>
             <p>Secure, Offline Multi-device Authenticator Client Engine</p>
+            <div class="header-actions">
+                <a class="editor-link" href="editing.html">⚡ Open Backup Editor</a>
+            </div>
         </header>
 
-        <!-- Configuration/Upload View -->
         <main class="glass-panel">
             <div class="drop-zone" id="drop-area">
                 <svg viewBox="0 0 24 24">
@@ -330,7 +353,6 @@
             </div>
         </main>
 
-        <!-- TOTP Active Panel -->
         <section id="totp-section" class="glass-panel hidden">
             <h2 class="section-title">
                 <span>🕒</span> Active Verification Codes
@@ -338,7 +360,6 @@
             <div class="dynamic-grid" id="totp-container"></div>
         </section>
 
-        <!-- Recovery Keys Panel -->
         <section id="recovery-section" class="glass-panel hidden">
             <h2 class="section-title">
                 <span>🔐</span> Multi-Platform Recovery Backups
@@ -347,14 +368,11 @@
         </section>
     </div>
 
-    <!-- Notification Engine Components -->
     <div class="toast" id="toast-notify">
         <span>✓</span> Code copied safely to clipboard!
     </div>
 
-    <!-- JavaScript Application Core Logic -->
     <script>
-        // Module level store holding application state context
         let parsedMains = {};
         let systemInterval = null;
 
@@ -366,9 +384,8 @@
         const recoveryContainer = document.getElementById('recovery-container');
         const toast = document.getElementById('toast-notify');
 
-        // Setup File Upload System Listeners
         dropArea.addEventListener('click', () => fileInput.click());
-        
+
         dropArea.addEventListener('dragover', (e) => {
             e.preventDefault();
             dropArea.classList.add('drag-over');
@@ -392,11 +409,9 @@
             }
         });
 
-        // Core Copy Clipboard Implementation
         function copyToClipboard(textValue) {
-            // Strip any white space markers before clipboard storage for authentication sanity
             const cleanText = textValue.replace(/\s+/g, '');
-            
+
             navigator.clipboard.writeText(cleanText).then(() => {
                 toast.classList.add('show');
                 setTimeout(() => {
@@ -404,10 +419,9 @@
                 }, 2500);
             }).catch(err => {
                 console.error("Clipboard failure, falling back: ", err);
-                // Fallback attempt for stricter local isolation conditions
                 const textArea = document.createElement("textarea");
                 textArea.value = cleanText;
-                textArea.style.position = "fixed"; 
+                textArea.style.position = "fixed";
                 document.body.appendChild(textArea);
                 textArea.focus();
                 textArea.select();
@@ -422,7 +436,6 @@
             });
         }
 
-        // Unified File Engine Handler
         function processUploadedFile(file) {
             const reader = new FileReader();
             reader.onload = function(event) {
@@ -437,19 +450,15 @@
             reader.readAsText(file);
         }
 
-        // Primary Interface Dynamic Rendering Engine
         function renderAuthenticatorInterface(data) {
-            // Clear prior engine timers
             if (systemInterval) clearInterval(systemInterval);
-            
+
             let elementsRendered = false;
 
-            // PART 1: Process and display standard TOTP instances if present
             totpContainer.innerHTML = '';
             parsedMains = {};
 
             if (data.mains) {
-                // Read nested account structure mapping
                 for (let userId in data.mains) {
                     const userTokens = data.mains[userId];
                     for (let tokenId in userTokens) {
@@ -467,9 +476,7 @@
                 if (Object.keys(parsedMains).length > 0) {
                     totpSection.classList.remove('hidden');
                     elementsRendered = true;
-                    // Seed initial rendering loop
                     updateTotpRenderLoop();
-                    // Set runtime update execution context every second
                     systemInterval = setInterval(updateTotpRenderLoop, 1000);
                 } else {
                     totpSection.classList.add('hidden');
@@ -478,7 +485,6 @@
                 totpSection.classList.add('hidden');
             }
 
-            // PART 2: Process and Display Recovery Panel Elements
             recoveryContainer.innerHTML = '';
             if (data.recovery_codes) {
                 let hasRecovery = false;
@@ -487,11 +493,10 @@
                     for (let platformName in platforms) {
                         hasRecovery = true;
                         const codeArray = platforms[platformName];
-                        
-                        // Structural execution context for building recovery tracking interfaces
+
                         const card = document.createElement('div');
                         card.className = 'auth-card';
-                        
+
                         const headerDiv = document.createElement('div');
                         headerDiv.className = 'card-header';
                         headerDiv.innerHTML = `
@@ -513,7 +518,6 @@
                                 <span>${escapeHtml(rawString)}</span>
                                 <span class="copy-icon-mini">📋</span>
                             `;
-                            // Setup click listener directly bound within scope block
                             tokenRow.addEventListener('click', () => {
                                 copyToClipboard(rawString);
                             });
@@ -536,35 +540,30 @@
             }
 
             if (elementsRendered) {
-                // Focus container layout directly to visible content
                 window.scrollTo({ top: totpSection.offsetTop - 20, behavior: 'smooth' });
             } else {
                 alert("The backup file loaded successfuly, but no active TOTP nodes or Recovery blocks were located.");
             }
         }
 
-        // Calculation Loop Context simulating offline authenticators
         function updateTotpRenderLoop() {
             const timeSeconds = Math.floor(Date.now() / 1000);
             const absoluteStep = 30;
             const remaining = absoluteStep - (timeSeconds % absoluteStep);
-            
-            // Mathematical calculations for modern visual indicators
+
             const radius = 12;
             const circumference = 2 * Math.PI * radius;
             const dashoffset = circumference - (remaining / absoluteStep) * circumference;
 
-            // Iterate over registered nodes to evaluate structural data matching
             for (let tokenId in parsedMains) {
                 const token = parsedMains[tokenId];
                 let cardElement = document.getElementById(`totp-${tokenId}`);
-                
-                // Deterministic creation step if elements don't already match rendering states
+
                 if (!cardElement) {
                     cardElement = document.createElement('div');
                     cardElement.className = 'auth-card';
                     cardElement.id = `totp-${tokenId}`;
-                    
+
                     cardElement.innerHTML = `
                         <div class="card-header">
                             <div>
@@ -581,30 +580,26 @@
                             <div class="code-display" id="code-${tokenId}">------</div>
                         </div>
                     `;
-                    
+
                     totpContainer.appendChild(cardElement);
-                    
-                    // Bind explicit target pointer events to secure isolated click functionality
+
                     const displayNode = cardElement.querySelector('.code-display');
                     displayNode.addEventListener('click', function() {
                         copyToClipboard(this.innerText);
                     });
                 }
 
-                // Update runtime presentation parameters
                 const computedCode = mockOfflineGenerateTOTP(token.secret, timeSeconds);
                 const currentDisplay = document.getElementById(`code-${tokenId}`);
                 if (currentDisplay && currentDisplay.innerText !== computedCode) {
                     currentDisplay.innerText = computedCode;
                 }
 
-                // Smooth execution tracking updates on visual canvas rings
                 const ringCircle = cardElement.querySelector('.progress-ring__circle');
                 if (ringCircle) {
                     ringCircle.style.strokeDasharray = `${circumference} ${circumference}`;
                     ringCircle.style.strokeDashoffset = dashoffset;
-                    
-                    // Warning status indicator color shifts
+
                     if (remaining <= 5) {
                         ringCircle.style.stroke = 'var(--danger-color)';
                     } else {
@@ -614,16 +609,13 @@
             }
         }
 
-        // Mock Offline Generator mimicking structural interface hooks cleanly
         function mockOfflineGenerateTOTP(secret, timestamp) {
             if (secret === "hidden") {
-                // Visual simulation logic matches standard structural presentation requirements
                 const sequenceIndex = Math.floor(timestamp / 30);
                 const deterministicDigits = String((sequenceIndex * 137) % 1000000).padStart(6, '0');
                 return deterministicDigits.substring(0, 3) + ' ' + deterministicDigits.substring(3, 6);
             }
-            
-            // Standard parsing structure safely processing runtime parameters
+
             let accum = 0;
             for (let i = 0; i < secret.length; i++) {
                 accum += secret.charCodeAt(i);
@@ -632,7 +624,6 @@
             return tokenCalc.substring(0, 3) + ' ' + tokenCalc.substring(3, 6);
         }
 
-        // Essential string filter engine protecting against context escaping
         function escapeHtml(str) {
             return String(str)
                 .replace(/&/g, "&amp;")
