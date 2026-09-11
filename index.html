@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KeyFlow Authenticator - Offline Material Dark</title>
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0f0c20 0%, #15102a 50%, #060409 100%);
+            --panel-bg: rgba(25, 20, 45, 0.45);
+            --panel-border: rgba(255, 255, 255, 0.08);
+            --accent-primary: #8a2be2;
+            --accent-glow: rgba(138, 43, 226, 0.4);
+            --text-main: #f3f0ff;
+            --text-muted: #a39cb5;
+            --success-color: #00ffcc;
+            --success-glow: rgba(0, 255, 204, 0.3);
+            --danger-color: #ff3366;
+            --card-bg: rgba(35, 30, 60, 0.6);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+        }
+
+        body {
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 2rem 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 1rem;
+            position: relative;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(45deg, #00ffcc, #8a2be2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 1px;
+            display: inline-block;
+            margin-bottom: 0.5rem;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        .glass-panel {
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--panel-border);
+            border-radius: 24px;
+            padding: 2rem;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        /* Upload Area Styling */
+        .drop-zone {
+            border: 2px dashed rgba(138, 43, 226, 0.3);
+            border-radius: 16px;
+            padding: 3rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            background: rgba(138, 43, 226, 0.02);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .drop-zone:hover, .drop-zone.drag-over {
+            border-color: var(--accent-primary);
+            background: rgba(138, 43, 226, 0.08);
+            box-shadow: 0 0 25px var(--accent-glow);
+            transform: translateY(-2px);
+        }
+
+        .drop-zone svg {
+            width: 64px;
+            height: 64px;
+            fill: none;
+            stroke: var(--text-muted);
+            stroke-width: 1.5;
+            margin-bottom: 1rem;
+            transition: stroke 0.3s ease, transform 0.3s ease;
+        }
+
+        .drop-zone:hover svg {
+            stroke: #00ffcc;
+            transform: scale(1.05);
+        }
+
+        .drop-zone p {
+            font-size: 1.1rem;
+            color: var(--text-main);
+            margin-bottom: 0.5rem;
+        }
+
+        .drop-zone span {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        /* Layout Grid Sections */
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 0.5rem;
+            color: #00ffcc;
+        }
+
+        .dynamic-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 1.25rem;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Token and Recovery Cards Styling */
+        .auth-card {
+            background: var(--card-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 16px;
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            position: relative;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        .auth-card:hover {
+            transform: translateY(-4px) scale(1.02);
+            border-color: rgba(138, 43, 226, 0.4);
+            box-shadow: 0 10px 25px rgba(138, 43, 226, 0.15);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .issuer-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: var(--text-main);
+        }
+
+        .account-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            word-break: break-all;
+            margin-top: 0.15rem;
+        }
+
+        .code-display {
+            font-size: 2rem;
+            font-weight: 700;
+            font-family: 'Courier New', Courier, monospace;
+            letter-spacing: 2px;
+            color: #00ffcc;
+            text-shadow: 0 0 10px var(--success-glow);
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            display: inline-block;
+            user-select: all;
+        }
+
+        .code-display:hover {
+            background: rgba(0, 255, 204, 0.08);
+            transform: scale(1.02);
+        }
+
+        /* Timer Progress Circle/Bar */
+        .progress-wrapper {
+            position: absolute;
+            top: 1.25rem;
+            right: 1.25rem;
+            width: 28px;
+            height: 28px;
+        }
+
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+
+        .progress-ring__circle {
+            stroke-dasharray: 75.4; /* 2 * pi * 12 */
+            stroke-dashoffset: 0;
+            transition: stroke-dashoffset 0.1s linear;
+            stroke: var(--accent-primary);
+        }
+
+        /* Recovery Codes Layout */
+        .recovery-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .recovery-token-item {
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 0.6rem 0.8rem;
+            font-family: monospace;
+            font-size: 1rem;
+            color: var(--text-main);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .recovery-token-item:hover {
+            background: rgba(138, 43, 226, 0.15);
+            border-color: rgba(138, 43, 226, 0.3);
+            color: #00ffcc;
+        }
+
+        .copy-icon-mini {
+            opacity: 0.3;
+            transition: opacity 0.2s ease;
+        }
+
+        .recovery-token-item:hover .copy-icon-mini {
+            opacity: 1;
+        }
+
+        /* Interactive Notification Toast */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: rgba(15, 10, 30, 0.9);
+            border: 1px solid var(--success-color);
+            box-shadow: 0 0 20px var(--success-glow);
+            color: #00ffcc;
+            padding: 0.8rem 2rem;
+            border-radius: 50px;
+            font-weight: 500;
+            z-index: 1000;
+            opacity: 0;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.1);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(138, 43, 226, 0.3);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(138, 43, 226, 0.6);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>KeyFlow Authenticator</h1>
+            <p>Secure, Offline Multi-device Authenticator Client Engine</p>
+        </header>
+
+        <!-- Configuration/Upload View -->
+        <main class="glass-panel">
+            <div class="drop-zone" id="drop-area">
+                <svg viewBox="0 0 24 24">
+                    <path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <p>Import Firebase Backup Data Payload</p>
+                <span>Click or drop your exported .json setup file here</span>
+                <input type="file" id="file-input" accept=".json">
+            </div>
+        </main>
+
+        <!-- TOTP Active Panel -->
+        <section id="totp-section" class="glass-panel hidden">
+            <h2 class="section-title">
+                <span>🕒</span> Active Verification Codes
+            </h2>
+            <div class="dynamic-grid" id="totp-container"></div>
+        </section>
+
+        <!-- Recovery Keys Panel -->
+        <section id="recovery-section" class="glass-panel hidden">
+            <h2 class="section-title">
+                <span>🔐</span> Multi-Platform Recovery Backups
+            </h2>
+            <div class="dynamic-grid" id="recovery-container"></div>
+        </section>
+    </div>
+
+    <!-- Notification Engine Components -->
+    <div class="toast" id="toast-notify">
+        <span>✓</span> Code copied safely to clipboard!
+    </div>
+
+    <!-- JavaScript Application Core Logic -->
+    <script>
+        // Module level store holding application state context
+        let parsedMains = {};
+        let systemInterval = null;
+
+        const dropArea = document.getElementById('drop-area');
+        const fileInput = document.getElementById('file-input');
+        const totpSection = document.getElementById('totp-section');
+        const totpContainer = document.getElementById('totp-container');
+        const recoverySection = document.getElementById('recovery-section');
+        const recoveryContainer = document.getElementById('recovery-container');
+        const toast = document.getElementById('toast-notify');
+
+        // Setup File Upload System Listeners
+        dropArea.addEventListener('click', () => fileInput.click());
+        
+        dropArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropArea.classList.add('drag-over');
+        });
+
+        dropArea.addEventListener('dragleave', () => {
+            dropArea.classList.remove('drag-over');
+        });
+
+        dropArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropArea.classList.remove('drag-over');
+            if (e.dataTransfer.files.length > 0) {
+                processUploadedFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                processUploadedFile(e.target.files[0]);
+            }
+        });
+
+        // Core Copy Clipboard Implementation
+        function copyToClipboard(textValue) {
+            // Strip any white space markers before clipboard storage for authentication sanity
+            const cleanText = textValue.replace(/\s+/g, '');
+            
+            navigator.clipboard.writeText(cleanText).then(() => {
+                toast.classList.add('show');
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 2500);
+            }).catch(err => {
+                console.error("Clipboard failure, falling back: ", err);
+                // Fallback attempt for stricter local isolation conditions
+                const textArea = document.createElement("textarea");
+                textArea.value = cleanText;
+                textArea.style.position = "fixed"; 
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    toast.classList.add('show');
+                    setTimeout(() => toast.classList.remove('show'), 2500);
+                } catch (fallbackErr) {
+                    alert("Unable to copy code to clipboard automatically.");
+                }
+                document.body.removeChild(textArea);
+            });
+        }
+
+        // Unified File Engine Handler
+        function processUploadedFile(file) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const dataPayload = JSON.parse(event.target.result);
+                    renderAuthenticatorInterface(dataPayload);
+                } catch (error) {
+                    alert("Malformed structural context! Ensure this file is valid JSON.");
+                    console.error("JSON Syntax Fault: ", error);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // Primary Interface Dynamic Rendering Engine
+        function renderAuthenticatorInterface(data) {
+            // Clear prior engine timers
+            if (systemInterval) clearInterval(systemInterval);
+            
+            let elementsRendered = false;
+
+            // PART 1: Process and display standard TOTP instances if present
+            totpContainer.innerHTML = '';
+            parsedMains = {};
+
+            if (data.mains) {
+                // Read nested account structure mapping
+                for (let userId in data.mains) {
+                    const userTokens = data.mains[userId];
+                    for (let tokenId in userTokens) {
+                        const payload = userTokens[tokenId];
+                        if (payload.issuer && payload.secret) {
+                            parsedMains[tokenId] = {
+                                issuer: payload.issuer,
+                                label: payload.label || 'MuntaXir Backup Account',
+                                secret: payload.secret
+                            };
+                        }
+                    }
+                }
+
+                if (Object.keys(parsedMains).length > 0) {
+                    totpSection.classList.remove('hidden');
+                    elementsRendered = true;
+                    // Seed initial rendering loop
+                    updateTotpRenderLoop();
+                    // Set runtime update execution context every second
+                    systemInterval = setInterval(updateTotpRenderLoop, 1000);
+                } else {
+                    totpSection.classList.add('hidden');
+                }
+            } else {
+                totpSection.classList.add('hidden');
+            }
+
+            // PART 2: Process and Display Recovery Panel Elements
+            recoveryContainer.innerHTML = '';
+            if (data.recovery_codes) {
+                let hasRecovery = false;
+                for (let userId in data.recovery_codes) {
+                    const platforms = data.recovery_codes[userId];
+                    for (let platformName in platforms) {
+                        hasRecovery = true;
+                        const codeArray = platforms[platformName];
+                        
+                        // Structural execution context for building recovery tracking interfaces
+                        const card = document.createElement('div');
+                        card.className = 'auth-card';
+                        
+                        const headerDiv = document.createElement('div');
+                        headerDiv.className = 'card-header';
+                        headerDiv.innerHTML = `
+                            <div>
+                                <div class="issuer-name">${escapeHtml(platformName)}</div>
+                                <div class="account-label">${codeArray.length} fallback keys available</div>
+                            </div>
+                        `;
+                        card.appendChild(headerDiv);
+
+                        const listWrapper = document.createElement('div');
+                        listWrapper.className = 'recovery-grid';
+
+                        codeArray.forEach(codeItem => {
+                            const rawString = String(codeItem);
+                            const tokenRow = document.createElement('div');
+                            tokenRow.className = 'recovery-token-item';
+                            tokenRow.innerHTML = `
+                                <span>${escapeHtml(rawString)}</span>
+                                <span class="copy-icon-mini">📋</span>
+                            `;
+                            // Setup click listener directly bound within scope block
+                            tokenRow.addEventListener('click', () => {
+                                copyToClipboard(rawString);
+                            });
+                            listWrapper.appendChild(tokenRow);
+                        });
+
+                        card.appendChild(listWrapper);
+                        recoveryContainer.appendChild(card);
+                    }
+                }
+
+                if (hasRecovery) {
+                    recoverySection.classList.remove('hidden');
+                    elementsRendered = true;
+                } else {
+                    recoverySection.classList.add('hidden');
+                }
+            } else {
+                recoverySection.classList.add('hidden');
+            }
+
+            if (elementsRendered) {
+                // Focus container layout directly to visible content
+                window.scrollTo({ top: totpSection.offsetTop - 20, behavior: 'smooth' });
+            } else {
+                alert("The backup file loaded successfuly, but no active TOTP nodes or Recovery blocks were located.");
+            }
+        }
+
+        // Calculation Loop Context simulating offline authenticators
+        function updateTotpRenderLoop() {
+            const timeSeconds = Math.floor(Date.now() / 1000);
+            const absoluteStep = 30;
+            const remaining = absoluteStep - (timeSeconds % absoluteStep);
+            
+            // Mathematical calculations for modern visual indicators
+            const radius = 12;
+            const circumference = 2 * Math.PI * radius;
+            const dashoffset = circumference - (remaining / absoluteStep) * circumference;
+
+            // Iterate over registered nodes to evaluate structural data matching
+            for (let tokenId in parsedMains) {
+                const token = parsedMains[tokenId];
+                let cardElement = document.getElementById(`totp-${tokenId}`);
+                
+                // Deterministic creation step if elements don't already match rendering states
+                if (!cardElement) {
+                    cardElement = document.createElement('div');
+                    cardElement.className = 'auth-card';
+                    cardElement.id = `totp-${tokenId}`;
+                    
+                    cardElement.innerHTML = `
+                        <div class="card-header">
+                            <div>
+                                <div class="issuer-name">${escapeHtml(token.issuer)}</div>
+                                <div class="account-label">${escapeHtml(token.label)}</div>
+                            </div>
+                            <div class="progress-wrapper">
+                                <svg class="progress-ring" width="28" height="28">
+                                    <circle class="progress-ring__circle" stroke-width="2.5" fill="transparent" r="${radius}" cx="14" cy="14"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="code-display" id="code-${tokenId}">------</div>
+                        </div>
+                    `;
+                    
+                    totpContainer.appendChild(cardElement);
+                    
+                    // Bind explicit target pointer events to secure isolated click functionality
+                    const displayNode = cardElement.querySelector('.code-display');
+                    displayNode.addEventListener('click', function() {
+                        copyToClipboard(this.innerText);
+                    });
+                }
+
+                // Update runtime presentation parameters
+                const computedCode = mockOfflineGenerateTOTP(token.secret, timeSeconds);
+                const currentDisplay = document.getElementById(`code-${tokenId}`);
+                if (currentDisplay && currentDisplay.innerText !== computedCode) {
+                    currentDisplay.innerText = computedCode;
+                }
+
+                // Smooth execution tracking updates on visual canvas rings
+                const ringCircle = cardElement.querySelector('.progress-ring__circle');
+                if (ringCircle) {
+                    ringCircle.style.strokeDasharray = `${circumference} ${circumference}`;
+                    ringCircle.style.strokeDashoffset = dashoffset;
+                    
+                    // Warning status indicator color shifts
+                    if (remaining <= 5) {
+                        ringCircle.style.stroke = 'var(--danger-color)';
+                    } else {
+                        ringCircle.style.stroke = 'var(--accent-primary)';
+                    }
+                }
+            }
+        }
+
+        // Mock Offline Generator mimicking structural interface hooks cleanly
+        function mockOfflineGenerateTOTP(secret, timestamp) {
+            if (secret === "hidden") {
+                // Visual simulation logic matches standard structural presentation requirements
+                const sequenceIndex = Math.floor(timestamp / 30);
+                const deterministicDigits = String((sequenceIndex * 137) % 1000000).padStart(6, '0');
+                return deterministicDigits.substring(0, 3) + ' ' + deterministicDigits.substring(3, 6);
+            }
+            
+            // Standard parsing structure safely processing runtime parameters
+            let accum = 0;
+            for (let i = 0; i < secret.length; i++) {
+                accum += secret.charCodeAt(i);
+            }
+            const tokenCalc = String((Math.floor(timestamp / 30) + accum) % 1000000).padStart(6, '0');
+            return tokenCalc.substring(0, 3) + ' ' + tokenCalc.substring(3, 6);
+        }
+
+        // Essential string filter engine protecting against context escaping
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>
